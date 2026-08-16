@@ -1,56 +1,47 @@
-const axios = require('axios');
+import makeWASocket, { useMultiFileAuthState, fetchLatestBaileysVersion } from '@whiskeysockets/baileys';
 
-module.exports = async (req, res) => {
+export default async function handler(req, res) {
+  // Allow any domain to fetch from this API (CORS enabled)
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed. Use POST.' });
 
   try {
     const { number } = req.body;
-    if (!number) return res.status(400).json({ error: 'Phone number required' });
 
-    // 1. Establish session
-    const sessionRes = await axios.get('https://baron0.com/free', {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.9'
-      }
+    if (!number) {
+      return res.status(400).json({ error: 'Phone number is required.' });
+    }
+
+    // Clean phone number format
+    const cleanNumber = number.replace(/[^0-9]/g, '');
+    const jid = `${cleanNumber}@s.whatsapp.net`;
+
+    const { state } = await useMultiFileAuthState('/tmp/auth_info');
+    const { version } = await fetchLatestBaileysVersion();
+
+    const sock = makeWASocket({
+      version,
+      auth: state,
+      printQRInTerminal: false,
+      connectTimeoutMs: 8000
     });
 
-    const setCookie = sessionRes.headers['set-cookie'];
-    const cookies = setCookie ? setCookie.map(c => c.split(';')[0]).join('; ') : '';
+    // Native WhatsApp existence check
+    const [result] = await sock.onWhatsApp(jid);
 
-    // 2. Query target endpoint
-    const response = await axios.post(
-      'https://baron0.com/check-numberr2',
-      { number },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-          'Origin': 'https://baron0.com',
-          'Referer': 'https://baron0.com/free',
-          'Cookie': cookies,
-          'X-Requested-With': 'XMLHttpRequest'
-        },
-        timeout: 8000
-      }
-    );
-
-    return res.status(200).json(response.data);
+    return res.status(200).json({
+      number: cleanNumber,
+      banned: !result?.exists,
+      reason: result?.exists ? 'Active on WhatsApp' : 'Number not registered or banned'
+    });
   } catch (error) {
-    // Print real error reason to debug
-    const status = error.response ? error.response.status : 500;
-    const details = error.response ? error.response.data : error.message;
-
-    return res.status(status).json({
-      error: 'Failed to process request',
-      statusCode: status,
-      details: details
+    return res.status(500).json({
+      error: 'Failed to process WhatsApp check',
+      details: error.message
     });
   }
-};
+}
