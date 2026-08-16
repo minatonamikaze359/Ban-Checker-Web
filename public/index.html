@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Public Ban Checker</title>
+  <title>WhatsApp Ban Checker</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -48,7 +48,7 @@
   <p class="sub">Check status for any WhatsApp number</p>
 
   <label for="phone">Phone Number</label>
-  <input type="tel" id="phone" placeholder="+1234567890 or 0151..." />
+  <input type="tel" id="phone" placeholder="+1234567890 or 4912345678" />
 
   <button id="check-btn">Check Status</button>
   <div id="error-msg" class="error"></div>
@@ -98,7 +98,7 @@
 
       if (!res.ok) throw new Error(data.error || 'Server error');
 
-      resStatus.textContent = data.banned ? 'BANNED' : 'CLEAN';
+      resStatus.textContent = data.banned ? 'BANNED / INACTIVE' : 'CLEAN / ACTIVE';
       resStatus.className = data.banned ? 'status-banned' : 'status-clean';
       resReason.textContent = data.reason || 'None';
 
