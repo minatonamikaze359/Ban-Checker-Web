@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Public Ban Checker</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0d1117; color: #c9d1d9;
+      display: flex; justify-content: center; align-items: center; min-height: 100vh;
+      padding: 1rem;
+    }
+    .container {
+      background: #161b22; border: 1px solid #30363d; border-radius: 12px;
+      padding: 2rem; max-width: 420px; width: 100%; box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    }
+    h1 { font-size: 1.5rem; color: #f0f6fc; margin-bottom: 0.5rem; text-align: center; }
+    p.sub { font-size: 0.85rem; color: #8b949e; margin-bottom: 1.5rem; text-align: center; }
+    label { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: #8b949e; display: block; margin-bottom: 0.5rem; }
+    input {
+      width: 100%; padding: 0.75rem; border-radius: 6px; border: 1px solid #30363d;
+      background: #0d1117; color: #fff; font-size: 1rem; margin-bottom: 1rem; outline: none;
+    }
+    input:focus { border-color: #58a6ff; }
+    button {
+      width: 100%; padding: 0.75rem; border: none; border-radius: 6px;
+      background: #238636; color: #fff; font-weight: 600; font-size: 0.95rem; cursor: pointer; transition: 0.2s;
+    }
+    button:hover { background: #2ea043; }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
+    .result-box {
+      margin-top: 1.5rem; padding: 1rem; border-radius: 6px; background: #0d1117;
+      border: 1px solid #30363d; display: none;
+    }
+    .result-row { display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem; }
+    .result-row:last-child { margin-bottom: 0; }
+    .status-banned { color: #f85149; font-weight: bold; }
+    .status-clean { color: #3fb950; font-weight: bold; }
+    .error { color: #f85149; font-size: 0.85rem; margin-top: 0.5rem; text-align: center; display: none; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>Ban Checker</h1>
+  <p class="sub">Check status for any WhatsApp number</p>
+
+  <label for="phone">Phone Number</label>
+  <input type="tel" id="phone" placeholder="+1234567890 or 0151..." />
+
+  <button id="check-btn">Check Status</button>
+  <div id="error-msg" class="error"></div>
+
+  <div id="result" class="result-box">
+    <div class="result-row">
+      <span>Status:</span>
+      <span id="res-status">—</span>
+    </div>
+    <div class="result-row">
+      <span>Reason:</span>
+      <span id="res-reason">—</span>
+    </div>
+  </div>
+</div>
+
+<script>
+  const phoneInput = document.getElementById('phone');
+  const checkBtn = document.getElementById('check-btn');
+  const resultBox = document.getElementById('result');
+  const resStatus = document.getElementById('res-status');
+  const resReason = document.getElementById('res-reason');
+  const errorMsg = document.getElementById('error-msg');
+
+  checkBtn.addEventListener('click', async () => {
+    const number = phoneInput.value.trim();
+    errorMsg.style.display = 'none';
+    
+    if (!number) {
+      errorMsg.textContent = 'Please enter a phone number.';
+      errorMsg.style.display = 'block';
+      return;
+    }
+
+    checkBtn.disabled = true;
+    checkBtn.textContent = 'Checking...';
+    resultBox.style.display = 'none';
+
+    try {
+      const res = await fetch('/check-numberr2', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ number })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.error || 'Server error');
+
+      resStatus.textContent = data.banned ? 'BANNED' : 'CLEAN';
+      resStatus.className = data.banned ? 'status-banned' : 'status-clean';
+      resReason.textContent = data.reason || 'None';
+
+      resultBox.style.display = 'block';
+    } catch (err) {
+      errorMsg.textContent = err.message || 'Failed to check status.';
+      errorMsg.style.display = 'block';
+    } finally {
+      checkBtn.disabled = false;
+      checkBtn.textContent = 'Check Status';
+    }
+  });
+</script>
+
+</body>
+</html>
